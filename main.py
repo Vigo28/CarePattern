@@ -30,6 +30,9 @@ while True:
     if not ret:
         break
 
+    # Mirror the camera horizontally
+    frame = cv2.flip(frame, 1)
+
     results = pose_model.track(frame, persist=True, classes=[0], verbose=False)
     annotated = results[0].plot()
 
@@ -62,20 +65,44 @@ while True:
     cv2.polylines(annotated, [np.array(pts_bed_zone)], isClosed=True, color=(0, 0, 255), thickness=4)
     cv2.polylines(annotated, [np.array(pts_table_zone)], isClosed=True, color=(0, 255, 0), thickness=4)
 
+    # Create fixed box for events display - centered at bottom
+    frame_height, frame_width = annotated.shape[:2]
+    box_width, box_height = 400, 200
+    box_x = (frame_width - box_width) // 2  # Center horizontally
+    box_y = frame_height - box_height - 20  # Position at bottom with margin
+    
+    # Draw semi-transparent background box
+    overlay = annotated.copy()
+    cv2.rectangle(overlay, (box_x, box_y), (box_x + box_width, box_y + box_height), (50, 50, 50), -1)
+    cv2.addWeighted(overlay, 0.7, annotated, 0.3, 0, annotated)
+    
+    # Draw box border
+    cv2.rectangle(annotated, (box_x, box_y), (box_x + box_width, box_y + box_height), (255, 255, 255), 2)
+    
+    # Title
+    cv2.putText(annotated, "ACTIVE EVENTS", (box_x + 10, box_y + 25), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    
+    text_y = box_y + 50
+    
     # bed events tekenen en TTL aftellen
-    for tid in list(active_bed_events.keys()):
-        cv2.putText(annotated, f"EVENT: Person {tid} in bed-zone",
-                    (50, 50 + 30 * tid), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8, (0, 0, 255), 2)
+    for idx, tid in enumerate(list(active_bed_events.keys())):
+        if text_y < box_y + box_height - 20:  # Check if text fits in box
+            cv2.putText(annotated, f"Person {tid} in bed-zone",
+                        (box_x + 10, text_y), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (100, 100, 255), 2)
+            text_y += 25
         active_bed_events[tid] -= 1
         if active_bed_events[tid] <= 0:
             del active_bed_events[tid]
 
     # table events tekenen en TTL aftellen
-    for tid in list(active_table_events.keys()):
-        cv2.putText(annotated, f"EVENT: Person {tid} at table-zone",
-                    (50, 150 + 30 * tid), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8, (0, 255, 0), 2)
+    for idx, tid in enumerate(list(active_table_events.keys())):
+        if text_y < box_y + box_height - 20:  # Check if text fits in box
+            cv2.putText(annotated, f"Person {tid} at table-zone",
+                        (box_x + 10, text_y), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (100, 255, 100), 2)
+            text_y += 25
         active_table_events[tid] -= 1
         if active_table_events[tid] <= 0:
             del active_table_events[tid]
