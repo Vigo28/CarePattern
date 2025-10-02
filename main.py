@@ -14,9 +14,12 @@ pts_table_zone = [(int(x), int(y)) for x, y in table_zone.exterior.coords]
 
 in_bed_counts = {}
 in_table_counts = {}
-threshold_frames = 10
+hands_above_head_counts = {}  # {track_id: count}
 active_bed_events = {}   # {track_id: ttl}
 active_table_events = {}   # {track_id: ttl}
+active_hands_events = {}  # {track_id: ttl}
+hands_currently_up = {}  # Track current hand position state for each person
+threshold_frames = 10
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # use DirectShow on windows for fast ini
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -36,7 +39,49 @@ while True:
     results = pose_model.track(frame, persist=True, classes=[0], verbose=False)
     annotated = results[0].plot()
 
-    if results[0].boxes.id is not None:
+    # Check if keypoints and boxes exist before processing
+    if results[0].keypoints is not None and results[0].boxes is not None and results[0].boxes.id is not None:
+        # Get keypoints for each person
+        for person_keypoints, tid in zip(results[0].keypoints.data, results[0].boxes.id):
+            tid = int(tid)  # Ensure tid is integer
+            # Get relevant keypoint indices
+            # 9: right wrist, 10: left wrist
+            # 5: right shoulder, 6: left shoulder
+            # 3: right ear, 4: left ear
+            wrists = person_keypoints[[9, 10]]
+            shoulders = person_keypoints[[5, 6]]
+            ears = person_keypoints[[3, 4]]
+
+            # Calculate average height of ears (approximate head position)
+            head_y = (ears[0][1] + ears[1][1]) / 2
+            # Calculate average height of shoulders
+            shoulder_y = (shoulders[0][1] + shoulders[1][1]) / 2
+            # Get wrist heights
+            right_wrist_y = wrists[0][1]
+            left_wrist_y = wrists[1][1]
+
+            # Check if either hand is above head
+            hands_up = (right_wrist_y < head_y or left_wrist_y < head_y) and \
+                      right_wrist_y != 0 and left_wrist_y != 0
+
+            # Only increment counter if hands weren't up before but are up now
+            if hands_up and not hands_currently_up.get(tid, False):
+                hands_above_head_counts[tid] = hands_above_head_counts.get(tid, 0) + 1
+                active_hands_events[tid] = 50  # Set TTL for event display
+                
+                # Draw warning text with counter
+                person_center = (int((shoulders[0][0] + shoulders[1][0]) / 2), 
+                               int(head_y - 30))
+                cv2.putText(annotated, f"Hands up! ({hands_above_head_counts[tid]}x)", 
+                           person_center, 
+                           cv2.FONT_HERSHEY_SIMPLEX, 
+                           1, (0, 0, 255), 2)
+
+            # Update the current state
+            hands_currently_up[tid] = hands_up
+
+    # Update the boxes check section too
+    if results[0].boxes is not None and results[0].boxes.id is not None:
         for box, tid in zip(results[0].boxes.xyxy, results[0].boxes.id):
             x1, y1, x2, y2 = map(int, box)
             cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
@@ -112,6 +157,17 @@ while True:
         active_table_events[tid] -= 1
         if active_table_events[tid] <= 0:
             del active_table_events[tid]
+
+    # Display hands above head events
+    for idx, tid in enumerate(list(active_hands_events.keys())):
+        if text_y < box_y + box_height - 20:  # Check if text fits in box
+            cv2.putText(annotated, f"Person {tid} raised hands {hands_above_head_counts[tid]}x",
+                        (box_x + 10, text_y), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (255, 100, 100), 2)
+            text_y += 25
+        active_hands_events[tid] -= 1
+        if active_hands_events[tid] <= 0:
+            del active_hands_events[tid]
 
     cv2.imshow("Zones + Pose + Tracking", annotated)
     if cv2.waitKey(1) & 0xFF == ord("q"):
