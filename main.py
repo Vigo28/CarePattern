@@ -6,7 +6,7 @@ from ultralytics import YOLO
 pose_model = YOLO("yolov8n-pose.pt")
 
 # Zone (voorbeeld)
-bed_zone = Polygon([(0, 0), (320, 0), (320, 720), (0, 720)])
+bed_zone = Polygon([(0, 0), (820, 0), (820, 720), (0, 720)])
 pts_bed_zone = [(int(x), int(y)) for x, y in bed_zone.exterior.coords]
 
 table_zone = Polygon([(960, 0), (1280, 0), (1280, 720), (960, 720)])
@@ -45,21 +45,27 @@ while True:
             # zone check
             if Point(cx, cy).within(bed_zone):
                 in_bed_counts[tid] = in_bed_counts.get(tid, 0) + 1
-                if in_bed_counts[tid] == threshold_frames:
-                    # event met TTL van 50 frames (~2 sec bij 25fps)
+                if in_bed_counts[tid] >= threshold_frames:
+                    # Houd event actief zolang persoon in zone is
                     active_bed_events[tid] = 50
-                    print(f"Person {tid} in bed-zone")
+                    if in_bed_counts[tid] == threshold_frames:
+                        print(f"Person {tid} in bed-zone")
             else:
                 in_bed_counts[tid] = 0
+                if tid in active_bed_events:
+                    del active_bed_events[tid]
 
             if Point(cx, cy).within(table_zone):
                 in_table_counts[tid] = in_table_counts.get(tid, 0) + 1
-                if in_table_counts[tid] == threshold_frames:
-                    # event met TTL van 50 frames (~2 sec bij 25fps)
+                if in_table_counts[tid] >= threshold_frames:
+                    # Houd event actief zolang persoon in zone is
                     active_table_events[tid] = 50
-                    print(f"Person {tid} at table-zone")
+                    if in_table_counts[tid] == threshold_frames:
+                        print(f"Person {tid} at table-zone")
             else:
                 in_table_counts[tid] = 0
+                if tid in active_table_events:
+                    del active_table_events[tid]
 
     # teken de zones
     cv2.polylines(annotated, [np.array(pts_bed_zone)], isClosed=True, color=(0, 0, 255), thickness=4)
