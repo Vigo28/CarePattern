@@ -3,7 +3,7 @@ import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO
 
-pose_model = YOLO("yolov8n-pose.pt")
+pose_model = YOLO("yolo11n-pose.pt")
 
 # Zone (voorbeeld)
 bed_zone = Polygon([(0, 0), (820, 0), (820, 720), (0, 720)])
