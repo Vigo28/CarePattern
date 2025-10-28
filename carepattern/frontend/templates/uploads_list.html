@@ -20,6 +20,9 @@
         <tr>
             <th>Filename</th>
             <th>Raw video</th>
+            <th>Video with skeleton overlay</th>
+            <th>Skeleton overlay</th>
+            <th>Prediction</th>
         </tr>
 
         {% for filename in files %}
@@ -35,6 +38,9 @@
                         Your browser does not support HTML videos.
                     </video>
                 </td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
         {% endfor %}
     </table>
