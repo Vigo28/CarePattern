@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>CarePattern</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 80vw;
+        }
+
+        td, th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Configuration</h1>
+    {% if config %}
+        <h2>Settings</h2>
+        <table>
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+
+            {% for key, value in config|dictsort %}
+                <tr>
+                    <td>{{ key }}:</td>
+                    <td>{{ value }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No configuration settings available.</p>
+    {% endif %}
+
+</body>
+</html>

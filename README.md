@@ -1,0 +1,35 @@
+# CarePattern
+
+## Introductie
+
+_Uitleg over CarePattern_
+
+## Gebruik
+
+Door `main.py` uit te voeren wordt de Flask applicatie gestart.
+
+In de browser kan de applicatie worden geopend op `http://localhost:8080/`.
+
+De huidige configuratie kan worden bekeken op `http://localhost:8080/config`.
+
+
+## Configuratie
+Bij het starten van de applicatie wordt de `config.ini` file gelezen.
+In dit bestand kunnen verschillende configuratie opties worden ingesteld.
+
+## Aanpassen
+
+Voor toekomstige aanpassingen of hergebruik kan de volgende structuur worden aangehouden.
+De `carepattern` module is opgesplitst in 2 subpackages; `core` en `frontend`:
+
+- In `carepattern.core` bevindt zich de core functionaliteit van CarePattern.
+- In `carepattern.frontend` bevindt zich een frontend interface voor de functionaliteit uit de `core` package.
+
+### `carepattern.core`
+
+tekst
+
+### `carepattern.frontend`
+
+In de `templates` folder kunnen HTML bestanden worden geplaatst die ingelezen kunnen worden door de Flask applicatie.
+In deze HTML bestanden kunnen Jinja2 templates worden gebruikt om dynamische content weer te geven.
