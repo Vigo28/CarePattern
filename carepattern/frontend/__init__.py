@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, flash, render_template, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 
@@ -30,11 +31,29 @@ def create_routes(app):
     def render_root():
         uploads_dir = app.config['UPLOAD_FOLDER']
         try:
-            files = [f for f in os.listdir(uploads_dir) if os.path.isfile(os.path.join(uploads_dir, f))]
-            files.sort()
+            folders = []
+            for entry in sorted(os.listdir(uploads_dir)):
+                entry_path = os.path.join(uploads_dir, entry)
+                if os.path.isdir(entry_path):
+                    files = [f for f in sorted(os.listdir(entry_path))
+                             if os.path.isfile(os.path.join(entry_path, f))]
+                    folder_data = {
+                        'name': entry,
+                        'raw': next((f"{entry}/{file}" for file in files if file == 'raw.mp4'), None),
+                        'overlay': next((f"{entry}/{file}" for file in files if file == 'skeleton-overlay.mp4'), None),
+                        'skeleton': next((f"{entry}/{file}" for file in files if file == 'skeleton.mp4'), None),
+                        'prediction': next((f"{entry}/{file}" for file in files if file == 'prediction.txt'), None)
+                    }
+                    folders.append(folder_data)
         except OSError:
-            files = []
-        return render_template('root.html', files=files)
+            folders = []
+
+        try:
+            app.logger.debug("folders:\\n%s", json.dumps(folders, indent=2))
+        except Exception:
+            app.logger.debug("folders (repr): %r", folders)
+
+        return render_template('root.html', folders=folders)
 
 
     @app.route('/config')
@@ -62,18 +81,20 @@ def create_routes(app):
 
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(save_path)
-                return redirect(url_for('uploaded_file', filename=filename))
 
-        # GET: list uploaded files and render template with the upload form included
-        uploads_dir = app.config['UPLOAD_FOLDER']
-        try:
-            files = [f for f in os.listdir(uploads_dir) if os.path.isfile(os.path.join(uploads_dir, f))]
-            files.sort()
-        except OSError:
-            files = []
-        return render_template('uploads.html', files=files)
+                filename_no_ext = os.path.splitext(filename)[0]
+                file_ext = os.path.splitext(filename)[1]
+                file_folder = os.path.join(app.config['UPLOAD_FOLDER'], filename_no_ext)
+                os.makedirs(file_folder, exist_ok=True) # make the subfolder
+
+                save_path = os.path.join(file_folder, f'raw{file_ext}') # save the raw video
+                file.save(save_path)
+
+                # return the redirect to the uploaded file
+                return redirect(url_for('uploaded_file', filename=f'{filename_no_ext}/raw{file_ext}'))
+
+        # GET request
+        return render_template('uploads.html')
 
 
     @app.route('/uploads/<path:filename>')
