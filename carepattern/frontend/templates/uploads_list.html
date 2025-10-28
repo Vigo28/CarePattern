@@ -12,6 +12,11 @@
     tr:nth-child(even) {
         background-color: #dddddd;
     }
+
+    .prediction-content {
+        text-decoration: none;
+        color: inherit;
+    }
 </style>
 
 <h2>Uploaded Files</h2>
@@ -19,11 +24,11 @@
 {% if folders %}
     <table>
         <tr>
-            <th>Folder</th>
-            <th>raw.mp4</th>
-            <th>skeleton-overlay.mp4</th>
-            <th>skeleton.mp4</th>
-            <th>prediction.txt</th>
+            <th>Original filename</th>
+            <th>Raw video</th>
+            <th>Video with skeleton overlay</th>
+            <th>Skeleton overlay only</th>
+            <th>Prediction</th>
         </tr>
 
         {% for folder in folders %}
@@ -59,7 +64,7 @@
 
                 <td>
                     {% if folder.prediction %}
-                        <a href="{{ url_for('uploaded_file', filename=folder.prediction) }}">
+                        <a href="{{ url_for('uploaded_file', filename=folder.prediction) }}" class="prediction-content">
                             {{ folder.prediction_content }}
                         </a>
                     {% endif %}
