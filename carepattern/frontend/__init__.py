@@ -108,7 +108,8 @@ def create_routes(app):
 
                 job_id = create_job()
                 output_path = os.path.join(file_folder, 'overlay.mp4')
-                start_processing(save_path, output_path, job_id, model_path=app.config.get('YOLO_POSE_MODEL'))
+                skeletons_path = os.path.join(file_folder, 'skeleton.mp4')
+                start_processing(save_path, output_path, skeletons_path, job_id, model_path=app.config.get('YOLO_POSE_MODEL'))
 
                 # persist job id next to the files so the root view can poll
                 try:

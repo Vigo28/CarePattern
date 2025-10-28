@@ -1,4 +1,3 @@
-<!-- language: html -->
 <style>
     table {
         border-collapse: collapse;
@@ -109,11 +108,11 @@
                 </td>
 
                 <td class="job-status" data-job-id="{{ folder.job_id }}">
-                    {% if folder.job_id and not (folder.overlay or folder.prediction) %}
+                    {% if folder.job_id %}
                         <div class="status-inner">
                             <div class="processing-indeterminate" style="display:none" aria-hidden="true"></div>
                             <div class="progress" aria-hidden="true" style="display:none">
-                                <span class="fill" style="width:0%"></span>
+                                <span class="fill" style="width:0"></span>
                             </div>
                             <span class="status-text">Initializing…</span>
                         </div>
@@ -144,7 +143,13 @@
                     const res = await fetch(statusUrl);
                     if (!res.ok) {
                         if (res.status === 404) {
-                            cell.innerHTML = '<span class="status-text">Unknown</span>';
+                            const txt = cell.querySelector('.status-text');
+                            const ind = cell.querySelector('.processing-indeterminate');
+                            const prog = cell.querySelector('.progress');
+
+                            if (txt) txt.textContent = 'Unknown';
+                            if (ind) ind.style.display = 'none';
+                            if (prog) prog.style.display = 'none';
                             clearInterval(timers.get(cell));
                             return;
                         }
@@ -178,6 +183,10 @@
                     }
 
                     if (js.status === 'done') {
+                        console.log('done');
+                        if (txt) txt.textContent = 'Done';
+                        if (ind) ind.style.display = 'none';
+                        if (prog) prog.style.display = 'none';
                         // attempt to replace the finished row on the page
                         const row = cell.closest('tr');
                         const rowId = row ? row.id : null;
@@ -188,20 +197,23 @@
                                     const text = await r.text();
                                     const parsed = new DOMParser().parseFromString(text, 'text/html');
                                     let newRow = rowId ? parsed.getElementById(rowId) : null;
-                                    if (newRow && row && row.parentNode) {
-                                        row.parentNode.replaceChild(newRow, row);
-                                        return;
+                                    if (newRow) {
+                                        const newStatusCell = newRow.querySelector('.job-status');
+                                        if (newStatusCell && !newStatusCell.hasAttribute('data-job-id')) {
+                                            row.parentNode.replaceChild(newRow, row);
+                                        }
                                     }
                                 }
                             } catch (e) {
                                 console.error('row replacement failed', e);
                             }
-                            window.location.reload();
                         };
                         setTimeout(attemptReplace, 600);
                         clearInterval(timers.get(cell));
                     } else if (js.status === 'error') {
-                        cell.innerHTML = `<span class="status-text">Error: ${js.error || 'processing error'}</span>`;
+                        if (txt) txt.textContent = `Error: ${js.error || 'processing error'}`;
+                        if (ind) ind.style.display = 'none';
+                        if (prog) prog.style.display = 'none';
                         clearInterval(timers.get(cell));
                     } else {
                         if (txt) txt.textContent = (hasProgress ? (p + '%') : 'Processing…');
