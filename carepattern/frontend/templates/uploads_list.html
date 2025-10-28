@@ -20,6 +20,9 @@
 </style>
 
 <h2>Uploaded Files</h2>
+<script>
+    console.table({{ folders|tojson }});
+</script>
 
 {% if folders %}
     <table>
