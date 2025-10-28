@@ -1,3 +1,4 @@
+<!-- language: html -->
 <style>
     table {
         border-collapse: collapse;
@@ -7,6 +8,7 @@
         border: 1px solid #dddddd;
         text-align: left;
         padding: 8px;
+        vertical-align: top;
     }
 
     tr:nth-child(even) {
@@ -17,12 +19,44 @@
         text-decoration: none;
         color: inherit;
     }
+
+    .progress {
+        width: 180px;
+        height: 12px;
+        background: #eee;
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .fill {
+        height: 100%;
+        width: 0%;
+        background: #2b8cff;
+        transition: width 300ms;
+        display: block;
+    }
+    .status-text {
+        margin-left: 8px;
+        display: inline-block;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+    .processing-indeterminate {
+        width: 80px;
+        height: 10px;
+        background: linear-gradient(90deg, rgba(43,140,255,0) 0%, rgba(43,140,255,0.6) 50%, rgba(43,140,255,0) 100%);
+        animation: ind 1s infinite linear;
+        display: inline-block;
+        border-radius: 5px;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+    @keyframes ind { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
 </style>
 
 <h2>Uploaded Files</h2>
-<script>
-    console.table({{ folders|tojson }});
-</script>
 
 {% if folders %}
     <table>
@@ -32,15 +66,16 @@
             <th>Video with skeleton overlay</th>
             <th>Skeleton overlay only</th>
             <th>Prediction</th>
+            <th>Status</th>
         </tr>
 
         {% for folder in folders %}
-            <tr>
+            <tr id="row-{{ folder.name|e }}">
                 <td>{{ folder.name }}</td>
 
                 <td>
                     {% if folder.raw %}
-                        <video width="320" height="240" controls>
+                        <video width="320" height="180" controls>
                             <source src="{{ url_for('uploaded_file', filename=folder.raw) }}" type="video/mp4">
                             Your browser does not support HTML videos.
                         </video>
@@ -49,7 +84,7 @@
 
                 <td>
                     {% if folder.overlay %}
-                        <video width="320" height="240" controls>
+                        <video width="320" height="180" controls>
                             <source src="{{ url_for('uploaded_file', filename=folder.overlay) }}" type="video/mp4">
                             Your browser does not support HTML videos.
                         </video>
@@ -58,7 +93,7 @@
 
                 <td>
                     {% if folder.skeleton %}
-                        <video width="320" height="240" controls>
+                        <video width="320" height="180" controls>
                             <source src="{{ url_for('uploaded_file', filename=folder.skeleton) }}" type="video/mp4">
                             Your browser does not support HTML videos.
                         </video>
@@ -72,9 +107,117 @@
                         </a>
                     {% endif %}
                 </td>
+
+                <td class="job-status" data-job-id="{{ folder.job_id }}">
+                    {% if folder.job_id and not (folder.overlay or folder.prediction) %}
+                        <div class="status-inner">
+                            <div class="processing-indeterminate" style="display:none" aria-hidden="true"></div>
+                            <div class="progress" aria-hidden="true" style="display:none">
+                                <span class="fill" style="width:0%"></span>
+                            </div>
+                            <span class="status-text">Initializing…</span>
+                        </div>
+                    {% elif folder.overlay or folder.prediction %}
+                        <span class="status-text">Done</span>
+                    {% else %}
+                        <span class="status-text">Waiting</span>
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
     </table>
 {% else %}
     <p>No files uploaded</p>
 {% endif %}
+
+<script>
+    (function(){
+        const cells = Array.from(document.querySelectorAll('.job-status[data-job-id]')).filter(c => c.dataset.jobId);
+        const timers = new Map();
+
+        cells.forEach(cell => {
+            const jobId = cell.dataset.jobId;
+            const statusUrl = `/yolo/status/${jobId}`;
+
+            async function updateOnce() {
+                try {
+                    const res = await fetch(statusUrl);
+                    if (!res.ok) {
+                        if (res.status === 404) {
+                            cell.innerHTML = '<span class="status-text">Unknown</span>';
+                            clearInterval(timers.get(cell));
+                            return;
+                        }
+                        throw new Error('status fetch failed');
+                    }
+                    const js = await res.json();
+
+                    const hasProgress = Object.prototype.hasOwnProperty.call(js, 'progress') && js.progress !== null && js.progress !== undefined;
+                    const p = hasProgress ? js.progress : 0;
+
+                    const inner = cell.querySelector('.status-inner');
+                    const fill = cell.querySelector('.fill');
+                    const txt = inner ? inner.querySelector('.status-text') : null;
+                    const ind = cell.querySelector('.processing-indeterminate');
+                    const prog = cell.querySelector('.progress');
+
+                    // If the polling UI doesn't exist (row replaced externally), stop.
+                    if (!inner) {
+                        clearInterval(timers.get(cell));
+                        return;
+                    }
+
+                    // toggle indeterminate vs determinate bar
+                    if (hasProgress) {
+                        if (ind) ind.style.display = 'none';
+                        if (prog) prog.style.display = 'inline-block';
+                        if (fill) fill.style.width = p + '%';
+                    } else {
+                        if (ind) ind.style.display = 'inline-block';
+                        if (prog) prog.style.display = 'none';
+                    }
+
+                    if (js.status === 'done') {
+                        // attempt to replace the finished row on the page
+                        const row = cell.closest('tr');
+                        const rowId = row ? row.id : null;
+                        const attemptReplace = async () => {
+                            try {
+                                const r = await fetch(window.location.href, { cache: 'no-store' });
+                                if (r.ok) {
+                                    const text = await r.text();
+                                    const parsed = new DOMParser().parseFromString(text, 'text/html');
+                                    let newRow = rowId ? parsed.getElementById(rowId) : null;
+                                    if (newRow && row && row.parentNode) {
+                                        row.parentNode.replaceChild(newRow, row);
+                                        return;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('row replacement failed', e);
+                            }
+                            window.location.reload();
+                        };
+                        setTimeout(attemptReplace, 600);
+                        clearInterval(timers.get(cell));
+                    } else if (js.status === 'error') {
+                        cell.innerHTML = `<span class="status-text">Error: ${js.error || 'processing error'}</span>`;
+                        clearInterval(timers.get(cell));
+                    } else {
+                        if (txt) txt.textContent = (hasProgress ? (p + '%') : 'Processing…');
+                    }
+                } catch (err) {
+                    console.error('poll error', err);
+                }
+            }
+
+            updateOnce();
+            const tid = setInterval(updateOnce, 1500);
+            timers.set(cell, tid);
+        });
+
+        window.addEventListener('beforeunload', () => {
+            timers.forEach(tid => clearInterval(tid));
+        });
+    })();
+</script>

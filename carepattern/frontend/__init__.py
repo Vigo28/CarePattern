@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, flash, render_template, render_template_string, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 
@@ -47,12 +48,23 @@ def create_routes(app):
                         'overlay': next((f"{entry}/{file}" for file in files if file == 'overlay.mp4'), None),
                         'skeleton': next((f"{entry}/{file}" for file in files if file == 'skeleton.mp4'), None),
                         'prediction': next((f"{entry}/{file}" for file in files if file == 'prediction.txt'), None),
-                        'prediction_content': None
+                        'prediction_content': None,
+                        'job_id': None
                     }
+                    # read prediction content
                     prediction_file = os.path.join(entry_path, 'prediction.txt')
                     if os.path.exists(prediction_file):
                         with open(prediction_file, 'r') as f:
                             folder_data['prediction_content'] = f.read()
+                    # read job id if present
+                    job_meta = os.path.join(entry_path, 'job.json')
+                    if os.path.exists(job_meta):
+                        try:
+                            with open(job_meta, 'r') as jf:
+                                j = json.load(jf)
+                                folder_data['job_id'] = j.get('job_id')
+                        except Exception:
+                            folder_data['job_id'] = None
                     folders.append(folder_data)
         except OSError:
             folders = []
@@ -98,6 +110,15 @@ def create_routes(app):
                 output_path = os.path.join(file_folder, 'overlay.mp4')
                 start_processing(save_path, output_path, job_id, model_path=app.config.get('YOLO_POSE_MODEL'))
 
+                # persist job id next to the files so the root view can poll
+                try:
+                    job_meta = os.path.join(file_folder, 'job.json')
+                    with open(job_meta, 'w') as jf:
+                        json.dump({"job_id": job_id}, jf)
+                except Exception:
+                    # non-fatal: don't break uploads if writing fails
+                    pass
+
                 # If AJAX / XHR upload, return job id so frontend can poll
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
                     return jsonify({"job_id": job_id}), 202
@@ -118,7 +139,7 @@ def create_routes(app):
         if not job:
             return "unknown job", 404
 
-        # simple inline template so no extra file is required
+        # inline template unchanged...
         template = r'''
         <!doctype html>
         <html>
@@ -137,12 +158,12 @@ def create_routes(app):
           <div id="spinner">Processing... <span id="percent">0\%</span></div>
           <div id="bar"><div id="fill"></div></div>
           <div id="result" style="margin-top:12px;"></div>
-    
+
           <script>
           const jobId = "{{ job_id }}";
           const statusUrl = `/yolo/status/${jobId}`;
           const resultUrl = `/yolo/result/${jobId}`;
-    
+
           async function poll() {
             try {
               const r = await fetch(statusUrl);
@@ -151,7 +172,7 @@ def create_routes(app):
               const p = js.progress || 0;
               document.getElementById('fill').style.width = p + '%';
               document.getElementById('percent').textContent = p + '%';
-    
+
               if (js.status === 'done') {
                 document.getElementById('spinner').textContent = 'Done';
                 document.getElementById('result').innerHTML = `<a href="${resultUrl}" target="_blank">Download overlay.mp4</a>`;
@@ -165,7 +186,7 @@ def create_routes(app):
               console.error(err);
             }
           }
-    
+
           // Initial poll and regular polling
           poll();
           const t = setInterval(poll, 1500);
