@@ -59,7 +59,9 @@
 
                 <td>
                     {% if folder.prediction %}
-                        <a href="{{ url_for('uploaded_file', filename=folder.prediction) }}">{{ folder.prediction.split('/')[-1] }}</a>
+                        <a href="{{ url_for('uploaded_file', filename=folder.prediction) }}">
+                            {{ folder.prediction_content }}
+                        </a>
                     {% endif %}
                 </td>
             </tr>

@@ -17,10 +17,10 @@ def create_app(config=None):
         os.makedirs(app.instance_path, exist_ok=True)
         uploads_path = os.path.join(app.instance_path, 'uploads')
         os.makedirs(uploads_path, exist_ok=True)
+
+        app.config.setdefault('UPLOAD_FOLDER', uploads_path)
     except OSError:
         pass
-
-    app.config.setdefault('UPLOAD_FOLDER', uploads_path)
 
     app = create_routes(app)
 
@@ -42,8 +42,13 @@ def create_routes(app):
                         'raw': next((f"{entry}/{file}" for file in files if file == 'raw.mp4'), None),
                         'overlay': next((f"{entry}/{file}" for file in files if file == 'skeleton-overlay.mp4'), None),
                         'skeleton': next((f"{entry}/{file}" for file in files if file == 'skeleton.mp4'), None),
-                        'prediction': next((f"{entry}/{file}" for file in files if file == 'prediction.txt'), None)
+                        'prediction': next((f"{entry}/{file}" for file in files if file == 'prediction.txt'), None),
+                        'prediction_content': None
                     }
+                    prediction_file = os.path.join(entry_path, 'prediction.txt')
+                    if os.path.exists(prediction_file):
+                        with open(prediction_file, 'r') as f:
+                            folder_data['prediction_content'] = f.read()
                     folders.append(folder_data)
         except OSError:
             folders = []
