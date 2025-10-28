@@ -1,3 +1,5 @@
+# Old main.py that tracks people inside zones.
+
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
