@@ -48,11 +48,6 @@ def create_routes(app):
         except OSError:
             folders = []
 
-        try:
-            app.logger.debug("folders:\\n%s", json.dumps(folders, indent=2))
-        except Exception:
-            app.logger.debug("folders (repr): %r", folders)
-
         return render_template('root.html', folders=folders)
 
 
