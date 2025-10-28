@@ -12,6 +12,11 @@ In de browser kan de applicatie worden geopend op `http://localhost:8080/`.
 
 De huidige configuratie kan worden bekeken op `http://localhost:8080/config`.
 
+Wanneer de applicatie gebruikt word, zal er in de projectfolder een `instance` folder verschijnen.
+In deze folder worden de geÜploadde en gegenereerde bestanden opgeslagen.
+Deze folder kan handmatig worden verwijderd, wanneer de applicatie niet meer gebruikt wordt.
+Dit moet ook gedaan worden om de cache van de applicatie te wissen.
+
 
 ## Configuratie
 Bij het starten van de applicatie wordt de `config.ini` file gelezen.

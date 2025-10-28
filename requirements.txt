@@ -1,4 +1,5 @@
-ultralytics 
+werkzeug
+ultralytics
 opencv-python
 shapely
 lap

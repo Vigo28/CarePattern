@@ -1,0 +1,43 @@
+<style>
+    table {
+        border-collapse: collapse;
+    }
+
+    td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #dddddd;
+    }
+</style>
+
+<h2>Uploaded Files</h2>
+{% if files %}
+    <table>
+        <tr>
+            <th>Filename</th>
+            <th>Raw video</th>
+        </tr>
+
+        {% for filename in files %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('uploaded_file', filename=filename) }}">
+                        {{ filename }}
+                    </a>
+                </td>
+                <td>
+                    <video width="320" height="240" controls>
+                        <source src="{{ url_for('uploaded_file', filename=filename) }}" type="video/mp4">
+                        Your browser does not support HTML videos.
+                    </video>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <li>No files uploaded</li>
+{% endif %}
