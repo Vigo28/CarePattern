@@ -2,7 +2,7 @@
 
 ## Introductie
 
-_Uitleg over CarePattern_
+CarePattern is een prototypeproject binnen CARAI gericht op het verminderen van administratieve lasten in de zorg. Het systeem registreert fysieke handelingen van zorgpersoneel automatisch via sensordata, videobeelden of handmatige input. Deze data worden geanalyseerd om patronen van aanwezigheid en handelingen te herkennen en te koppelen aan administratieve registraties.
 
 ## Gebruik
 
