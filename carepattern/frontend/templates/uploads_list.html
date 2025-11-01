@@ -17,6 +17,8 @@
     .prediction-content {
         text-decoration: none;
         color: inherit;
+        white-space: pre-wrap;     /* preserve newlines and wrap long lines */
+        display: inline-block;     /* allow block-level wrapping inside the anchor */
     }
 
     .progress {
@@ -102,7 +104,7 @@
                 <td>
                     {% if folder.prediction %}
                         <a href="{{ url_for('uploaded_file', filename=folder.prediction) }}" class="prediction-content">
-                            {{ folder.prediction_content }}
+                            {{ folder.prediction_content | e }}
                         </a>
                     {% endif %}
                 </td>

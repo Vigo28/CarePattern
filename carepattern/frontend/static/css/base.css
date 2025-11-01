@@ -4,3 +4,7 @@ body {
     font-family: 'Roboto', Arial, sans-serif;
     margin: 1rem;
 }
+
+body > * {
+    margin-bottom: 1rem;
+}

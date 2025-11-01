@@ -7,12 +7,14 @@ import av
 from ultralytics import YOLO
 
 from .jobs import set_status, set_output, set_error, set_progress
+from .detect import process_datapoints
 
 def _process_video_file(input_path: str, output_path: str, skeleton_output_path, job_id: str, model_path: str = "yolo11n-pose.pt"):
     set_status(job_id, "processing")
     input_path = Path(input_path)
     output_path = Path(output_path)
     skeleton_output_path = Path(skeleton_output_path)
+    prediction_output_path = Path(output_path.parent / "prediction.txt")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     cap = None
@@ -60,6 +62,10 @@ def _process_video_file(input_path: str, output_path: str, skeleton_output_path,
             except Exception:
                 results = None
 
+            # Do detection on skeleton data
+            process_datapoints(results, prediction_output_path)
+
+            # Render overlay and skeleton-only video frames
             if results and len(results) > 0:
                 try:
                     plotted = results[0].plot()
