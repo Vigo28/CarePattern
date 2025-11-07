@@ -63,7 +63,7 @@ def _process_video_file(input_path: str, output_path: str, skeleton_output_path,
                 results = None
 
             # Do detection on skeleton data
-            process_datapoints(datapoints=results, frame_number=frame_idx, output_path=prediction_output_path, fps=fps)
+            process_datapoints(datapoints=results, frame_number=frame_idx, output_path=prediction_output_path, fps=fps, job_id=job_id)
 
             # Render overlay and skeleton-only video frames
             if results and len(results) > 0:
