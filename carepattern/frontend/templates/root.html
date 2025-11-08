@@ -1,15 +1,51 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CarePattern</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 </head>
 <body>
-    <h1>CarePattern Proof of Concept</h1>
-    <a href="/config">Configuration</a>
-    <a href="/upload">Upload</a>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">CarePattern</a>
+        <div class="nav-links">
+            <a href="/upload" class="nav-link">Upload Analyse</a>
+            <a href="/config" class="nav-link">Instellingen</a>
+        </div>
+    </nav>
 
-    {% include 'uploads_list.html' %}
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <h1>Bewegingsanalyse Platform</h1>
+            <p class="lead">Upload video's om bewegingspatronen te analyseren.</p>
+        </div>
+
+        {% include 'uploads_list.html' %}
+    </main>
+
+    <script>
+        // Automatically remove flash messages after 5 seconds
+        setTimeout(() => {
+            const flashMessages = document.querySelector('.flash-messages');
+            if (flashMessages) {
+                flashMessages.style.opacity = '0';
+                flashMessages.style.transition = 'opacity 0.3s ease-out';
+                setTimeout(() => flashMessages.remove(), 300);
+            }
+        }, 5000);
+    </script>
 </body>
 </html>

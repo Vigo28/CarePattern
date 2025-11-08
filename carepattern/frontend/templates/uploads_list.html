@@ -21,217 +21,244 @@
         display: inline-block;     /* allow block-level wrapping inside the anchor */
     }
 
+    .status-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: var(--gray-100);
+        border-radius: 4px;
+        width: 100%;
+        max-width: 150px;
+    }
+
     .progress {
-        width: 180px;
-        height: 12px;
+        width: 100%;
+        height: 6px;
         background: #eee;
-        border-radius: 6px;
+        border-radius: 3px;
         overflow: hidden;
         position: relative;
-        display: inline-block;
-        vertical-align: middle;
     }
     .fill {
         height: 100%;
         width: 0%;
         background: #2b8cff;
-        transition: width 300ms;
-        display: block;
+        transition: width 300ms ease;
     }
+    .progress-text {
+        position: absolute;
+        right: 0;
+        top: -18px;
+        font-size: 0.75rem;
+        color: var(--gray-600);
+    }
+
     .status-text {
-        margin-left: 8px;
-        display: inline-block;
-        font-size: 0.9rem;
-        vertical-align: middle;
+        color: var(--gray-900);
+        font-size: 0.875rem;
+        font-weight: 500;
     }
-    .processing-indeterminate {
-        width: 80px;
-        height: 10px;
-        background: linear-gradient(90deg, rgba(43,140,255,0) 0%, rgba(43,140,255,0.6) 50%, rgba(43,140,255,0) 100%);
-        animation: ind 1s infinite linear;
+
+    .status-badge {
         display: inline-block;
-        border-radius: 5px;
-        vertical-align: middle;
-        margin-right: 8px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-align: center;
     }
-    @keyframes ind { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+    .status-done {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .status-error {
+        background: #f8d7da;
+        color: #721c24;
+    }
 </style>
 
-<h2>Uploaded Files</h2>
+<div class="card">
+    <div class="card-header">
+        <h2>Analyseresultaten</h2>
+        <p class="text-muted">Bekijk uw geüploade bewegingsanalyses</p>
+    </div>
 
-{% if folders %}
-    <table>
-        <tr>
-            <th>Original filename</th>
-            <th>Raw video</th>
-            <th>Video with skeleton overlay</th>
-            <th>Skeleton overlay only</th>
-            <th>Prediction</th>
-            <th>Status</th>
-        </tr>
-
-        {% for folder in folders %}
-            <tr id="row-{{ folder.name|e }}">
-                <td>{{ folder.name }}</td>
-
-                <td>
-                    {% if folder.raw %}
-                        <video width="320" height="180" controls>
-                            <source src="{{ url_for('uploaded_file', filename=folder.raw) }}" type="video/mp4">
-                            Your browser does not support HTML videos.
-                        </video>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if folder.overlay %}
-                        <video width="320" height="180" controls>
-                            <source src="{{ url_for('uploaded_file', filename=folder.overlay) }}" type="video/mp4">
-                            Your browser does not support HTML videos.
-                        </video>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if folder.skeleton %}
-                        <video width="320" height="180" controls>
-                            <source src="{{ url_for('uploaded_file', filename=folder.skeleton) }}" type="video/mp4">
-                            Your browser does not support HTML videos.
-                        </video>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if folder.prediction %}
-                        <a href="{{ url_for('uploaded_file', filename=folder.prediction) }}" class="prediction-content">
-                            {{ folder.prediction_content | e }}
-                        </a>
-                    {% endif %}
-                </td>
-
-                <td class="job-status" data-job-id="{{ folder.job_id }}">
-                    {% if folder.job_id %}
-                        <div class="status-inner">
-                            <div class="processing-indeterminate" style="display:none" aria-hidden="true"></div>
-                            <div class="progress" aria-hidden="true" style="display:none">
-                                <span class="fill" style="width:0"></span>
-                            </div>
-                            <span class="status-text">Initializing…</span>
-                        </div>
-                    {% elif folder.overlay or folder.prediction %}
-                        <span class="status-text">Done</span>
-                    {% else %}
-                        <span class="status-text">Waiting</span>
-                    {% endif %}
-                </td>
-            </tr>
-        {% endfor %}
-    </table>
-{% else %}
-    <p>No files uploaded</p>
-{% endif %}
+    {% if folders %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Patiënt Video</th>
+                        <th>Originele Opname</th>
+                        <th>Analyse Overlay</th>
+                        <th>Bewegingspatroon</th>
+                        <th>Resultaten</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for folder in folders %}
+                        <tr id="row-{{ folder.name|e }}">
+                            <td class="font-medium">{{ folder.name }}</td>
+                            <td>
+                                {% if folder.raw %}
+                                    <div class="video-container">
+                                        <video controls preload="metadata">
+                                            <source src="{{ url_for('video', path=folder.raw) }}" type="video/mp4">
+                                            Video kan niet worden weergegeven
+                                        </video>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if folder.overlay %}
+                                    <div class="video-container">
+                                        <video controls preload="metadata">
+                                            <source src="{{ url_for('video', path=folder.overlay) }}" type="video/mp4">
+                                            Video kan niet worden weergegeven
+                                        </video>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if folder.skeleton %}
+                                    <div class="video-container">
+                                        <video controls preload="metadata">
+                                            <source src="{{ url_for('video', path=folder.skeleton) }}" type="video/mp4">
+                                            Video kan niet worden weergegeven
+                                        </video>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if folder.prediction_content %}
+                                    <div class="analysis-results">
+                                        {{ folder.prediction_content }}
+                                    </div>
+                                {% else %}
+                                    <div class="text-muted">
+                                        Geen resultaten beschikbaar
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <!-- Update the status cell in the table -->
+                            <td class="job-status" data-job-id="{{ folder.job_id }}">
+                                {% if folder.overlay %}
+                                    {% if folder.prediction %}
+                                        <span class="status-badge status-done">Voltooid</span>
+                                    {% else %}
+                                        <span class="status-badge status-done">Geen resultaten</span>
+                                    {% endif %}
+                                {% elif folder.job_id %}
+                                    <div class="status-inner">
+                                        <div class="status-text">Bezig met verwerken</div>
+                                        <div class="progress">
+                                            <div class="fill"></div>
+                                            <span class="progress-text">0%</span>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="status-badge status-pending">In Afwachting</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <p>Nog geen analyseresultaten beschikbaar</p>
+            <a href="/upload" class="btn btn-primary mt-3">Start Nieuwe Analyse</a>
+        </div>
+    {% endif %}
+</div>
 
 <script>
-    (function(){
-        const cells = Array.from(document.querySelectorAll('.job-status[data-job-id]')).filter(c => c.dataset.jobId);
-        const timers = new Map();
+(function(){
+    const cells = document.querySelectorAll('.job-status[data-job-id]');
+    const activeTimers = new Map();
 
-        cells.forEach(cell => {
-            const jobId = cell.dataset.jobId;
-            const statusUrl = `/yolo/status/${jobId}`;
+    cells.forEach(cell => {
+        const jobId = cell.dataset.jobId;
+        if (!jobId) return;
 
-            async function updateOnce() {
-                try {
-                    const res = await fetch(statusUrl);
-                    if (!res.ok) {
-                        if (res.status === 404) {
-                            const txt = cell.querySelector('.status-text');
-                            const ind = cell.querySelector('.processing-indeterminate');
-                            const prog = cell.querySelector('.progress');
+        // Only start polling if the cell has a status-inner (active job)
+        if (!cell.querySelector('.status-inner')) return;
 
-                            if (txt) txt.textContent = 'Unknown';
-                            if (ind) ind.style.display = 'none';
-                            if (prog) prog.style.display = 'none';
-                            clearInterval(timers.get(cell));
-                            return;
-                        }
-                        throw new Error('status fetch failed');
-                    }
-                    const js = await res.json();
+        const statusUrl = `/yolo/status/${jobId}`;
+        let completed = false;
 
-                    const hasProgress = Object.prototype.hasOwnProperty.call(js, 'progress') && js.progress !== null && js.progress !== undefined;
-                    const p = hasProgress ? js.progress : 0;
+        async function updateStatus() {
+            try {
+                const response = await fetch(statusUrl);
+                if (!response.ok) throw new Error('Status fetch failed');
+                
+                const data = await response.json();
+                const statusInner = cell.querySelector('.status-inner');
+                if (!statusInner) {
+                    stopPolling(jobId);
+                    return;
+                }
 
-                    const inner = cell.querySelector('.status-inner');
-                    const fill = cell.querySelector('.fill');
-                    const txt = inner ? inner.querySelector('.status-text') : null;
-                    const ind = cell.querySelector('.processing-indeterminate');
-                    const prog = cell.querySelector('.progress');
+                const progressBar = statusInner.querySelector('.fill');
+                const progressText = statusInner.querySelector('.progress-text');
+                const statusText = statusInner.querySelector('.status-text');
 
-                    // If the polling UI doesn't exist (row replaced externally), stop.
-                    if (!inner) {
-                        clearInterval(timers.get(cell));
-                        return;
-                    }
+                // Update progress
+                if (data.progress !== null && data.progress !== undefined) {
+                    const progress = Math.round(data.progress);
+                    if (progressBar) progressBar.style.width = `${progress}%`;
+                    if (progressText) progressText.textContent = `${progress}%`;
+                }
 
-                    // toggle indeterminate vs determinate bar
-                    if (hasProgress) {
-                        if (ind) ind.style.display = 'none';
-                        if (prog) prog.style.display = 'inline-block';
-                        if (fill) fill.style.width = p + '%';
-                    } else {
-                        if (ind) ind.style.display = 'inline-block';
-                        if (prog) prog.style.display = 'none';
-                    }
-
-                    if (js.status === 'done') {
-                        console.log('done');
-                        if (txt) txt.textContent = 'Done';
-                        if (ind) ind.style.display = 'none';
-                        if (prog) prog.style.display = 'none';
-                        // attempt to replace the finished row on the page
-                        const row = cell.closest('tr');
-                        const rowId = row ? row.id : null;
-                        const attemptReplace = async () => {
-                            try {
-                                const r = await fetch(window.location.href, { cache: 'no-store' });
-                                if (r.ok) {
-                                    const text = await r.text();
-                                    const parsed = new DOMParser().parseFromString(text, 'text/html');
-                                    let newRow = rowId ? parsed.getElementById(rowId) : null;
-                                    if (newRow) {
-                                        const newStatusCell = newRow.querySelector('.job-status');
-                                        if (newStatusCell && !newStatusCell.hasAttribute('data-job-id')) {
-                                            row.parentNode.replaceChild(newRow, row);
-                                        }
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('row replacement failed', e);
-                            }
-                        };
-                        setTimeout(attemptReplace, 600);
-                        clearInterval(timers.get(cell));
-                    } else if (js.status === 'error') {
-                        if (txt) txt.textContent = `Error: ${js.error || 'processing error'}`;
-                        if (ind) ind.style.display = 'none';
-                        if (prog) prog.style.display = 'none';
-                        clearInterval(timers.get(cell));
-                    } else {
-                        if (txt) txt.textContent = (hasProgress ? (p + '%') : 'Processing…');
-                    }
-                } catch (err) {
-                    console.error('poll error', err);
+                // Handle completion states
+                if (data.status === 'done' && !completed) {
+                    completed = true;
+                    stopPolling(jobId);
+                    setTimeout(() => window.location.reload(), 500);
+                } else if (data.status === 'error') {
+                    cell.innerHTML = '<span class="status-badge status-error">Fout bij verwerking</span>';
+                    stopPolling(jobId);
+                } else if (data.status && data.status !== 'processing') {
+                    if (statusText) statusText.textContent = data.status;
+                }
+            } catch (error) {
+                console.error('Status update error:', error);
+                // Stop polling on error after 3 retries
+                if (error.retries && error.retries >= 3) {
+                    stopPolling(jobId);
                 }
             }
+        }
 
-            updateOnce();
-            const tid = setInterval(updateOnce, 1500);
-            timers.set(cell, tid);
-        });
+        function stopPolling(jobId) {
+            const timer = activeTimers.get(jobId);
+            if (timer) {
+                clearInterval(timer);
+                activeTimers.delete(jobId);
+            }
+        }
 
-        window.addEventListener('beforeunload', () => {
-            timers.forEach(tid => clearInterval(tid));
-        });
-    })();
+        // Initial update
+        updateStatus();
+        // Start polling and store the timer
+        const timer = setInterval(updateStatus, 1000);
+        activeTimers.set(jobId, timer);
+    });
+
+    // Cleanup timers when leaving the page
+    window.addEventListener('beforeunload', () => {
+        activeTimers.forEach(timer => clearInterval(timer));
+        activeTimers.clear();
+    });
+})();
 </script>

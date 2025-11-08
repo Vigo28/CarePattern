@@ -31,46 +31,79 @@ def create_app(config=None):
 
     return app
 
+def format_prediction_content(content):
+    """Format prediction content for better readability"""
+    if not content:
+        return ""
+    
+    lines = []
+    for line in content.split('\n'):
+        line = line.strip()
+        if not line or line.startswith("Bewegingsanalyse"):
+            continue
+            
+        if ':' in line:
+            parts = [part.strip() for part in line.split('|')]
+            if len(parts) >= 4:
+                # Format each line without any extra spaces
+                lines.append(f"{parts[0].strip()} | {parts[1].strip()} | {parts[2].strip()} | {parts[3].strip()}")
+    
+    # Join lines with simple newlines, no extra spacing
+    return '\n'.join(lines) if lines else ""
+
 def create_routes(app):
     @app.route('/')
     def render_root():
         uploads_dir = app.config['UPLOAD_FOLDER']
         try:
             folders = []
-            for entry in sorted(os.listdir(uploads_dir)):
+            for entry in sorted(os.listdir(uploads_dir), reverse=True):  # Nieuwste eerst
                 entry_path = os.path.join(uploads_dir, entry)
                 if os.path.isdir(entry_path):
-                    files = [f for f in sorted(os.listdir(entry_path))
-                             if os.path.isfile(os.path.join(entry_path, f))]
+                    # Check alle mogelijke videobestanden
+                    raw_video = None
+                    for ext in ['.mp4', '.MP4']:
+                        if os.path.exists(os.path.join(entry_path, f'raw{ext}')):
+                            raw_video = f"{entry}/raw{ext}"
+                            break
+
                     folder_data = {
                         'name': entry,
-                        'raw': next((f"{entry}/{file}" for file in files if file == 'raw.mp4'), None),
-                        'overlay': next((f"{entry}/{file}" for file in files if file == 'overlay.mp4'), None),
-                        'skeleton': next((f"{entry}/{file}" for file in files if file == 'skeleton.mp4'), None),
-                        'prediction': next((f"{entry}/{file}" for file in files if file == 'prediction.txt'), None),
+                        'raw': raw_video,
+                        'overlay': f"{entry}/overlay.mp4" if os.path.exists(os.path.join(entry_path, 'overlay.mp4')) else None,
+                        'skeleton': f"{entry}/skeleton.mp4" if os.path.exists(os.path.join(entry_path, 'skeleton.mp4')) else None,
+                        'prediction': f"{entry}/prediction.txt" if os.path.exists(os.path.join(entry_path, 'prediction.txt')) else None,
                         'prediction_content': None,
                         'job_id': None
                     }
-                    # read prediction content
+
+                    # Lees prediction content
                     prediction_file = os.path.join(entry_path, 'prediction.txt')
                     if os.path.exists(prediction_file):
-                        with open(prediction_file, 'r') as f:
-                            folder_data['prediction_content'] = f.read()
-                    # read job id if present
+                        try:
+                            with open(prediction_file, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                                folder_data['prediction_content'] = format_prediction_content(content)
+                        except Exception as e:
+                            print(f"Error reading prediction file: {e}")
+                            folder_data['prediction_content'] = "Fout bij laden van resultaten"
+
+                    # Lees job id indien aanwezig
                     job_meta = os.path.join(entry_path, 'job.json')
                     if os.path.exists(job_meta):
                         try:
                             with open(job_meta, 'r') as jf:
                                 j = json.load(jf)
                                 folder_data['job_id'] = j.get('job_id')
-                        except Exception:
-                            folder_data['job_id'] = None
+                        except Exception as e:
+                            print(f"Error reading job meta: {e}")
+
                     folders.append(folder_data)
-        except OSError:
+        except Exception as e:
+            print(f"Error loading folders: {e}")
             folders = []
 
         return render_template('root.html', folders=folders)
-
 
     @app.route('/config')
     def render_config():
@@ -83,50 +116,41 @@ def create_routes(app):
                 filename.rsplit('.', 1)[1].lower() in app.config.get('ALLOWED_EXTENSIONS', set())
 
         if request.method == 'POST':
-            # check if the post request has the file part
             if 'file' not in request.files:
-                flash('No file part')
+                flash('Geen bestand geselecteerd')
                 return redirect(request.url)
 
             file = request.files['file']
-            # If the user does not select a file, the browser submits an
-            # empty file without a filename.
             if file.filename == '':
-                flash('No selected file')
+                flash('Geen bestand geselecteerd')
                 return redirect(request.url)
 
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-
                 filename_no_ext = os.path.splitext(filename)[0]
                 file_ext = os.path.splitext(filename)[1]
                 file_folder = os.path.join(app.config['UPLOAD_FOLDER'], filename_no_ext)
-                os.makedirs(file_folder, exist_ok=True) # make the subfolder
+                os.makedirs(file_folder, exist_ok=True)
 
-                save_path = os.path.join(file_folder, f'raw{file_ext}') # save the raw video
+                save_path = os.path.join(file_folder, f'raw{file_ext}')
                 file.save(save_path)
 
                 job_id = create_job()
                 output_path = os.path.join(file_folder, 'overlay.mp4')
                 skeletons_path = os.path.join(file_folder, 'skeleton.mp4')
-                start_processing(save_path, output_path, skeletons_path, job_id, model_path=app.config.get('YOLO_POSE_MODEL'))
+                start_processing(save_path, output_path, skeletons_path, job_id, 
+                               model_path=app.config.get('YOLO_POSE_MODEL'))
 
-                # persist job id next to the files so the root view can poll
                 try:
                     job_meta = os.path.join(file_folder, 'job.json')
                     with open(job_meta, 'w') as jf:
                         json.dump({"job_id": job_id}, jf)
                 except Exception:
-                    # non-fatal: don't break uploads if writing fails
                     pass
 
-                # If AJAX / XHR upload, return job id so frontend can poll
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-                    return jsonify({"job_id": job_id}), 202
+                flash('Video succesvol geüpload. Verwerking is gestart.', 'success')
+                return redirect(url_for('render_root'))
 
-                return redirect(url_for('yolo_progress', job_id=job_id))
-
-        # GET request
         return render_template('uploads.html')
 
 
@@ -220,6 +244,23 @@ def create_routes(app):
         if not os.path.exists(p):
             return "file missing", 404
         return send_from_directory(directory=os.path.dirname(p), path=os.path.basename(p), as_attachment=True)
+
+    @app.route('/video/<path:path>')
+    def video(path):
+        """Serve video files from the upload folder"""
+        try:
+            directory = os.path.dirname(path)
+            filename = os.path.basename(path)
+            video_path = os.path.join(app.config['UPLOAD_FOLDER'], directory)
+            return send_from_directory(video_path, filename)
+        except Exception as e:
+            print(f"Error serving video: {e}")
+            return "Video niet gevonden", 404
+
+    @app.route('/prediction/<path:path>')
+    def prediction(path):
+        """Serve prediction text files from the upload folder"""
+        return send_from_directory(app.config['UPLOAD_FOLDER'], path)
 
     if app.config.get('DEBUG', False):
         @app.route('/uploads/debug/<path:filename>')

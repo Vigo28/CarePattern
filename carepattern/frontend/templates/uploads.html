@@ -1,17 +1,58 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
     <meta charset="utf-8">
-    <title>Upload & Uploaded Files</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Video Upload - CarePattern</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 </head>
 <body>
-<h1>Upload new File</h1>
-<a href="{{ url_for('render_root') }}">Home</a>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">CarePattern</a>
+        <div class="nav-links">
+            <a href="/upload" class="nav-link">Video Upload</a>
+            <a href="/config" class="nav-link">Instellingen</a>
+        </div>
+    </nav>
 
-<form method="post" enctype="multipart/form-data">
-    <input type="file" name="file">
-    <input type="submit" value="Upload">
-</form>
+    <main class="container">
+        <div class="card">
+            <h1>Upload Video voor Analyse</h1>
+            <p>Upload een video opname om bewegingspatronen te analyseren.</p>
+            
+            <form method="post" enctype="multipart/form-data">
+                <div class="file-upload">
+                    <input type="file" name="file" id="file" accept="video/*" style="display: none">
+                    <label for="file">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                        </svg>
+                        <p>Klik om een video te selecteren of sleep een bestand hierheen</p>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Start Analyse</button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        const fileUpload = document.querySelector('.file-upload');
+        const fileInput = document.querySelector('#file');
+
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = 'var(--primary)';
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.style.borderColor = 'var(--gray-300)';
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInput.files = e.dataTransfer.files;
+            fileUpload.style.borderColor = 'var(--success)';
+        });
+    </script>
 </body>
 </html>
