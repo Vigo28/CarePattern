@@ -21,11 +21,13 @@ def _process_video_file(input_path: str, output_path: str, skeleton_output_path,
     pose_model = None
 
     try:
+        set_status(job_id, "Model laden...")
         pose_model = YOLO(model_path)
 
+        set_status(job_id, "Video voorbereiden...")
         cap = cv2.VideoCapture(str(input_path))
         if not cap.isOpened():
-            raise RuntimeError(f"Unable to open input video: {input_path}")
+            raise RuntimeError(f"Kan video niet openen: {input_path}")
 
         fps = float(cap.get(cv2.CAP_PROP_FPS) or 30.0)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
@@ -53,6 +55,9 @@ def _process_video_file(input_path: str, output_path: str, skeleton_output_path,
             ret, frame = cap.read()
             if not ret:
                 break
+
+            if frame_idx == 0:
+                set_status(job_id, "Bewegingsanalyse wordt uitgevoerd...")
 
             annotated = frame
             skeleton_only = np.zeros_like(frame)
@@ -99,8 +104,13 @@ def _process_video_file(input_path: str, output_path: str, skeleton_output_path,
             frame_idx += 1
             if total_frames:
                 percent = int(frame_idx * 100 / max(1, total_frames))
+                remaining_frames = total_frames - frame_idx
+                estimated_time = remaining_frames / fps
+                status_message = f"Verwerking: {percent}% - Nog {int(estimated_time)}s te gaan"
+                set_status(job_id, status_message)
                 set_progress(job_id, percent)
 
+        set_status(job_id, "Video's genereren...")
         # Flush encoders and close containers
         for packet in stream_overlay.encode():
             container_overlay.mux(packet)
@@ -110,6 +120,7 @@ def _process_video_file(input_path: str, output_path: str, skeleton_output_path,
             container_skeleton.mux(packet)
         container_skeleton.close()
 
+        set_status(job_id, "Analyse voltooid")
         set_output(job_id, str(output_path))
         set_status(job_id, "done")
     except Exception as e:
