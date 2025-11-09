@@ -19,7 +19,7 @@ Dit moet ook gedaan worden om de cache van de applicatie te wissen.
 
 
 ## Configuratie
-Bij het starten van de applicatie wordt de `config.ini` file gelezen.
+Bij het starten van de applicatie wordt de `config.ini` file gelezen. Dit inladen gebeurt in de `config_loader.py` file van de frontend.
 In dit bestand kunnen verschillende configuratie opties worden ingesteld.
 
 ## Aanpassen
@@ -32,9 +32,14 @@ De `carepattern` module is opgesplitst in 2 subpackages; `core` en `frontend`:
 
 ### `carepattern.core`
 
-tekst
+In de `core` package bevinden zich de volgende modules:
+- `detect.py`: Hierin zit alle logica voor het detecteren van patronen, op basis van de gedetecteerde data.
+- `jobs.py`: Hierin zit alle logica voor het verwerken van jobs. Deze worden gebruikt om asynchrone verwerking van data te realiseren.
+- `video.py`: Hierin zit alle logica voor het verwerken van videobeelden.
 
 ### `carepattern.frontend`
 
 In de `templates` folder kunnen HTML bestanden worden geplaatst die ingelezen kunnen worden door de Flask applicatie.
 In deze HTML bestanden kunnen Jinja2 templates worden gebruikt om dynamische content weer te geven.
+
+Ook bevat de router van de frontend in `__init__.py` de logica voor het inladen en verwerken van bestanden.
